@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17130b">
+<title>Chest Open Counter</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 18px;
+    display: grid; place-items: center;
+    background: #17130b; color: #f5f0e5;
+    font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  .panel {
+    width: min(100%, 440px); height: min(78vh, 690px); min-height: 500px;
+    position: relative; overflow: hidden;
+    border: 3px solid #d6a638; border-radius: 22px;
+    background: #211b10;
+    box-shadow: 0 0 0 1px #6f531b inset;
+  }
+  #cameraFeed {
+    display: none; position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover; opacity: .34;
+    transform: scaleX(-1);
+  }
+  .camera-control {
+    position: absolute; top: 22px; left: 22px; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  #cameraButton {
+    width: 58px; height: 58px; border-radius: 12px;
+    border: 1px solid #b9a16d; background: #332b1b; color: white;
+    font-size: 27px; cursor: pointer;
+  }
+  #cameraButton:focus-visible { outline: 3px solid #f5d27a; outline-offset: 3px; }
+  .status { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; }
+  #dot { width:9px; height:9px; border-radius:50%; background:#777; }
+  #dot.on { background:#ed3434; box-shadow:0 0 8px #ed3434; }
+  .center-content {
+    position:absolute; left:50%; top:65%; transform:translate(-50%,-50%);
+    width:100%; display:flex; flex-direction:column; align-items:center; gap:9px;
+    z-index:1; text-align:center; pointer-events:none;
+  }
+  h1 { margin:0; color:#e9b943; font-size:clamp(25px, 7vw, 34px); letter-spacing:1px; }
+  #count { margin:0; font-size:clamp(38px, 11vw, 52px); font-weight:700; font-variant-numeric:tabular-nums; }
+  #message {
+    position:absolute; bottom:15px; left:14px; right:14px; z-index:2;
+    text-align:center; color:#d8c9a5; font-size:12px; line-height:1.35;
+    background:#17130bd9; padding:8px; border-radius:8px;
+  }
+  @media (max-height:600px) {
+    .panel { height:88vh; min-height:420px; }
+    .center-content { top:66%; }
+  }
+</style>
+</head>
+<body>
+  <main class="panel" aria-label="Chest Open counter">
+    <video id="cameraFeed" autoplay playsinline muted></video>
+    <div class="camera-control">
+      <button id="cameraButton" type="button" aria-label="Turn camera on">📷</button>
+      <div class="status"><span id="dot"></span><span id="cameraStatus">OFF</span></div>
+    </div>
+    <div class="center-content">
+      <h1>CHEST OPEN</h1>
+      <p id="count">0</p>
+    </div>
+    <div id="message">Camera is off. Chest auto-detection is not installed in this first version.</div>
+  </main>
+<script>
+(() => {
+  const button = document.getElementById('cameraButton');
+  const video = document.getElementById('cameraFeed');
+  const dot = document.getElementById('dot');
+  const status = document.getElementById('cameraStatus');
+  const message = document.getElementById('message');
+  let stream = null;
+
+  async function turnOn() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      message.textContent = 'Camera access needs a secure browser page (HTTPS) and camera permission. Open this app from a secure website.';
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }, audio: false
+      });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      await video.play();
+      dot.classList.add('on');
+      status.textContent = 'ON';
+      button.textContent = '📷';
+      button.setAttribute('aria-label', 'Turn camera off');
+      message.textContent = 'Camera is on. Automatic Fortnite chest recognition is not available yet, so the number will not count by itself.';
+    } catch (err) {
+      message.textContent = err && err.name === 'NotAllowedError'
+        ? 'Camera permission was not allowed. Please allow camera access in your browser settings.'
+        : 'Could not start the camera. Try a secure browser page and check that no other app is using the camera.';
+    }
+  }
+
+  function turnOff() {
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    stream = null;
+    video.srcObject = null;
+    video.style.display = 'none';
+    dot.classList.remove('on');
+    status.textContent = 'OFF';
+    button.textContent = '📷';
+    button.setAttribute('aria-label', 'Turn camera on');
+    message.textContent = 'Camera is off. Chest auto-detection is not installed in this first version.';
+  }
+
+  button.addEventListener('click', () => stream ? turnOff() : turnOn());
+  window.addEventListener('pagehide', turnOff);
+})();
+</script>
+</body>
+</html>
